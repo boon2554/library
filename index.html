@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลงทะเบียนเข้าใช้ห้องสืบค้น</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red-deep:#5a0000;
+    --red-mid:#8c0f0f;
+    --red-glow:#b3241a;
+    --panel-black:#141014;
+    --panel-black-2:#1c161c;
+    --violet:#6a3df5;
+    --violet-soft:#8f6bff;
+    --seat-free:#c7c7cf;
+    --seat-taken:#38c172;
+    --seat-selected:#ffd23f;
+    --text-main:#f3eef2;
+    --text-dim:#cbb8c4;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Prompt',sans-serif;
+    color:var(--text-main);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 14px;
+    background:
+      radial-gradient(120% 90% at 50% -10%, var(--red-glow) 0%, var(--red-mid) 45%, var(--red-deep) 100%);
+  }
+
+  .card{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    border-radius:26px;
+    border:2px solid var(--violet);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 30px 60px -20px rgba(0,0,0,0.65),
+      0 0 40px -10px rgba(106,61,245,0.35);
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 10px),
+      linear-gradient(180deg, var(--red-mid), var(--red-deep) 70%);
+    padding:22px 20px 26px;
+  }
+
+  .titlebar{
+    background:var(--panel-black);
+    border:1px solid var(--violet-soft);
+    border-radius:14px;
+    padding:14px 16px;
+    text-align:center;
+    margin-bottom:20px;
+    box-shadow:0 0 22px -6px rgba(106,61,245,0.5) inset;
+  }
+  .titlebar h1{
+    margin:0;
+    font-size:15px;
+    font-weight:600;
+    line-height:1.55;
+    letter-spacing:.2px;
+  }
+  .titlebar h1 span{display:block; font-weight:400; font-size:13.5px; color:var(--text-dim);}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:13.5px;
+    font-weight:500;
+    margin-bottom:6px;
+    color:var(--text-main);
+  }
+  .field input, .field select{
+    width:100%;
+    padding:11px 13px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:#d9d9de;
+    color:#221822;
+    font-family:'Prompt',sans-serif;
+    font-size:14px;
+    outline:none;
+    transition:box-shadow .15s ease, border-color .15s ease;
+  }
+  .field input:focus, .field select:focus{
+    border-color:var(--violet-soft);
+    box-shadow:0 0 0 3px rgba(143,107,255,0.35);
+  }
+  .field .err{
+    display:none;
+    color:#ffb4b4;
+    font-size:12px;
+    margin-top:5px;
+  }
+  .field.invalid input, .field.invalid select{border-color:#ff7a7a;}
+  .field.invalid .err{display:block;}
+
+  .row2{display:flex; gap:12px;}
+  .row2 .field{flex:1;}
+
+  .seat-section-title{
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    margin:22px 0 10px;
+  }
+  .seat-panel{
+    position:relative;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 10px),
+      var(--panel-black-2);
+    border:1px solid var(--violet-soft);
+    border-radius:16px;
+    padding:14px 16px 16px 12px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(15, 1fr);
+    gap:8px;
+  }
+  .seat{
+    aspect-ratio:1/1;
+    border-radius:7px;
+    background:var(--seat-free);
+    border:none;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    position:relative;
+  }
+  .seat:hover:not(.taken):not(.selected){transform:translateY(-1px); box-shadow:0 4px 10px -4px rgba(0,0,0,0.6);}
+  .seat.taken{background:var(--seat-taken); cursor:not-allowed; opacity:.95;}
+  .seat.selected{background:var(--seat-selected); box-shadow:0 0 0 2px #fff8, 0 0 14px 2px rgba(255,210,63,0.6);}
+  .seat.col-span-3{grid-column:span 3;}
+  .seat.col-span-4{grid-column:span 4; aspect-ratio:auto;}
+  .scrollbar-deco{
+    position:absolute;
+    right:5px;
+    top:56px;
+    width:4px;
+    height:76px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.55);
+  }
+
+  .legend{
+    display:flex;
+    gap:16px;
+    justify-content:center;
+    margin-top:14px;
+    font-size:12px;
+    color:var(--text-dim);
+    flex-wrap:wrap;
+  }
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:12px; height:12px; border-radius:3px; display:inline-block;}
+  .dot.free{background:var(--seat-free);}
+  .dot.taken{background:var(--seat-taken);}
+  .dot.selected{background:var(--seat-selected);}
+
+  .selected-info{
+    text-align:center;
+    margin-top:12px;
+    font-size:13.5px;
+    color:var(--text-main);
+    min-height:18px;
+  }
+  .selected-info b{color:#ffd23f;}
+
+  .submit-err{
+    display:none;
+    text-align:center;
+    color:#ffb4b4;
+    font-size:12.5px;
+    margin-top:10px;
+  }
+
+  .submit-btn{
+    display:block;
+    width:100%;
+    margin-top:20px;
+    padding:13px;
+    border:none;
+    border-radius:12px;
+    background:var(--panel-black);
+    border:1px solid var(--violet-soft);
+    color:var(--text-main);
+    font-family:'Prompt',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .submit-btn:hover{filter:brightness(1.25);}
+  .submit-btn:active{transform:scale(0.98);}
+
+  /* thank you screen */
+  .thanks{
+    display:none;
+    text-align:center;
+    padding:30px 6px 6px;
+  }
+  .thanks h2{font-size:16px; font-weight:600; margin:0 0 22px; line-height:1.6;}
+  .thanks p{font-size:14.5px; color:var(--text-dim); margin:0 0 6px;}
+  .thanks .summary{
+    margin:18px 0 26px;
+    background:var(--panel-black-2);
+    border:1px solid var(--violet-soft);
+    border-radius:12px;
+    padding:14px 16px;
+    text-align:left;
+    font-size:14px;
+    line-height:1.9;
+  }
+  .thanks .summary b{color:#ffd23f; font-weight:600;}
+  .back-btn{
+    display:inline-block;
+    padding:11px 26px;
+    border-radius:10px;
+    background:var(--panel-black);
+    border:1px solid var(--violet-soft);
+    color:var(--text-main);
+    font-family:'Prompt',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .back-btn:hover{filter:brightness(1.25);}
+
+  @media (prefers-reduced-motion: reduce){
+    .seat, .submit-btn, .back-btn{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+
+  <!-- FORM VIEW -->
+  <div id="formView">
+    <div class="titlebar">
+      <h1>การเข้าใช้ห้องสืบค้น (ห้องสมุด)
+        <span>โรงเรียนเบญจมราชูทิศ</span>
+      </h1>
+    </div>
+
+    <div class="field" id="f-name">
+      <label for="fullname">ชื่อ - นามสกุล</label>
+      <input type="text" id="fullname" placeholder="กรอกชื่อ-นามสกุล">
+      <div class="err">กรุณากรอกชื่อ-นามสกุล</div>
+    </div>
+
+    <div class="row2">
+      <div class="field" id="f-class">
+        <label for="classroom">ชั้น</label>
+        <input type="text" id="classroom" placeholder="เช่น ม.5/3">
+        <div class="err">กรุณากรอกชั้น</div>
+      </div>
+      <div class="field" id="f-number">
+        <label for="number">เลขที่</label>
+        <input type="text" id="number" inputmode="numeric" placeholder="เช่น 12">
+        <div class="err">กรุณากรอกเลขที่</div>
+      </div>
+    </div>
+
+    <div class="seat-section-title">เลือกที่นั่ง (โซน A)</div>
+    <div class="seat-panel">
+      <div class="grid" id="seatGrid"></div>
+      <div class="scrollbar-deco"></div>
+      <div class="legend">
+        <span><i class="dot free"></i>ที่นั่งว่าง</span>
+        <span><i class="dot taken"></i>โต๊ะที่ถูกจองแล้ว</span>
+        <span><i class="dot selected"></i>ที่นั่งที่เลือก</span>
+      </div>
+      <div class="selected-info" id="seatInfo">ยังไม่ได้เลือกที่นั่ง</div>
+    </div>
+    <div class="submit-err" id="submitErr">กรุณากรอกข้อมูลให้ครบและเลือกที่นั่งก่อนบันทึก</div>
+
+    <button class="submit-btn" id="submitBtn">บันทึกข้อมูล</button>
+  </div>
+
+  <!-- THANK YOU VIEW -->
+  <div class="thanks" id="thanksView">
+    <h2>ขอบคุณที่เข้าใช้บริการ<br>ห้องสืบค้น (ห้องสมุด)</h2>
+    <div class="summary" id="summaryBox"></div>
+    <button class="back-btn" id="backBtn">กลับสู่หน้าหลัก</button>
+  </div>
+
+</div>
+
+<script>
+  // ---- Seat layout config: matches the exact floor plan ----
+  // Rows 1-4: 5 individual seats each (uniform small squares)
+  // Rows 5-6: 1 individual seat (col 1) + 3 wide "table" seats
+  const NORMAL_ROWS = 4;
+  const NORMAL_COLS = 5;
+  const TABLE_ROWS = 2;
+
+  // pre-booked seats in the normal rows: row2/col3 and row4/col2 (1-based, as in the plan)
+  const occupiedNormal = new Set(['2-3', '4-2']); // 'row-col'
+
+  let selectedSeatEl = null;
+  let selectedSeatLabel = null;
+
+  const grid = document.getElementById('seatGrid');
+
+  function makeSeat(labelText, isTaken, spanClass) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'seat ' + spanClass;
+    btn.setAttribute('aria-label', labelText);
+    btn.dataset.label = labelText;
+    if (isTaken) {
+      btn.classList.add('taken');
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', () => selectSeat(btn));
+    }
+    return btn;
+  }
+
+  function selectSeat(btn) {
+    if (selectedSeatEl) selectedSeatEl.classList.remove('selected');
+    selectedSeatEl = btn;
+    selectedSeatEl.classList.add('selected');
+    selectedSeatLabel = btn.dataset.label;
+    document.getElementById('seatInfo').innerHTML = 'ที่นั่งที่เลือก: <b>' + selectedSeatLabel + '</b>';
+  }
+
+  // Rows 1-4: 5 individual seats, each spans 3 of 15 grid columns
+  let seatCounter = 1;
+  for (let r = 1; r <= NORMAL_ROWS; r++) {
+    for (let c = 1; c <= NORMAL_COLS; c++) {
+      const key = r + '-' + c;
+      const label = 'ที่นั่ง ' + seatCounter;
+      const seat = makeSeat(label, occupiedNormal.has(key), 'col-span-3');
+      grid.appendChild(seat);
+      seatCounter++;
+    }
+  }
+
+  // Rows 5-6: column 1 individual seat (span 3) + 3 wide table seats (span 4 each)
+  for (let r = 1; r <= TABLE_ROWS; r++) {
+    const colSeatLabel = 'ที่นั่ง ' + seatCounter;
+    grid.appendChild(makeSeat(colSeatLabel, false, 'col-span-3'));
+    seatCounter++;
+    for (let t = 1; t <= 3; t++) {
+      const label = 'โต๊ะ ' + r + '-' + t;
+      grid.appendChild(makeSeat(label, false, 'col-span-4'));
+    }
+  }
+
+  // ---- Validation & submit ----
+  const submitBtn = document.getElementById('submitBtn');
+  const submitErr = document.getElementById('submitErr');
+
+  function setInvalid(fieldId, invalid) {
+    const el = document.getElementById(fieldId);
+    el.classList.toggle('invalid', invalid);
+  }
+
+  submitBtn.addEventListener('click', () => {
+    const name = document.getElementById('fullname').value.trim();
+    const classroom = document.getElementById('classroom').value.trim();
+    const number = document.getElementById('number').value.trim();
+
+    let ok = true;
+    setInvalid('f-name', !name);
+    setInvalid('f-class', !classroom);
+    setInvalid('f-number', !number);
+    if (!name || !classroom || !number || !selectedSeatLabel) ok = false;
+
+    if (!ok) {
+      submitErr.style.display = 'block';
+      return;
+    }
+    submitErr.style.display = 'none';
+
+    document.getElementById('summaryBox').innerHTML =
+      'ชื่อ-นามสกุล: <b>' + escapeHtml(name) + '</b><br>' +
+      'ชั้น: <b>' + escapeHtml(classroom) + '</b> &nbsp; เลขที่: <b>' + escapeHtml(number) + '</b><br>' +
+      'ที่นั่ง: <b>' + escapeHtml(selectedSeatLabel) + '</b>';
+
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('thanksView').style.display = 'block';
+  });
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    document.getElementById('thanksView').style.display = 'none';
+    document.getElementById('formView').style.display = 'block';
+    // reset form
+    document.getElementById('fullname').value = '';
+    document.getElementById('classroom').value = '';
+    document.getElementById('number').value = '';
+    ['f-name','f-class','f-number'].forEach(id => setInvalid(id, false));
+    submitErr.style.display = 'none';
+    if (selectedSeatEl) {
+      selectedSeatEl.classList.remove('selected');
+      selectedSeatEl = null;
+      selectedSeatLabel = null;
+    }
+    document.getElementById('seatInfo').textContent = 'ยังไม่ได้เลือกที่นั่ง';
+  });
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+  }
+</script>
+
+</body>
+</html>
